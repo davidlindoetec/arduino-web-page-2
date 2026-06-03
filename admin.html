@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Solar Control - Admin Logs</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',monospace;background:#080d1a;color:#f1f5f9;min-height:100vh;padding:1.5rem}
+.container{max-width:800px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:.3rem}
+.sub{color:#64748b;font-size:.8rem;margin-bottom:1.5rem}
+.status{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .8rem;border-radius:50px;font-size:.75rem;font-weight:600;margin-bottom:1rem;background:rgba(239,68,68,.1);color:#ef4444}
+.status.ok{background:rgba(16,185,129,.1);color:#10b981}
+.status .dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:b 2s infinite}
+@keyframes b{0%,100%{opacity:1}50%{opacity:.2}}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1.5rem}
+.stat{background:rgba(30,41,59,.5);border-radius:12px;padding:1rem;text-align:center;border:1px solid #1e293b}
+.stat .val{font-size:1.5rem;font-weight:800;color:#f59e0b}
+.stat .lbl{font-size:.65rem;color:#64748b;margin-top:.2rem;text-transform:uppercase}
+.log-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem}
+.log-header h2{font-size:1rem}
+.btn-clear{padding:.4rem .8rem;border-radius:8px;border:none;background:#ef4444;color:#fff;font-size:.75rem;font-weight:600;cursor:pointer}
+.log-table{width:100%;border-collapse:collapse}
+.log-table th{text-align:left;padding:.6rem .8rem;font-size:.7rem;color:#64748b;text-transform:uppercase;border-bottom:1px solid #1e293b}
+.log-table td{padding:.5rem .8rem;font-size:.78rem;border-bottom:1px solid rgba(30,41,59,.5)}
+.log-table tr:hover{background:rgba(245,158,11,.03)}
+.tag{display:inline-block;padding:.15rem .4rem;border-radius:4px;font-size:.65rem;font-weight:600}
+.tag-cmd{background:rgba(59,130,246,.15);color:#60a5fa}
+.tag-session{background:rgba(245,158,11,.15);color:#fbbf24}
+.tag-routine{background:rgba(16,185,129,.15);color:#34d399}
+.empty{text-align:center;padding:3rem;color:#334155;font-size:.9rem}
+@media(max-width:600px){.stats{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>📊 Solar Control - Admin</h1>
+<div class="sub">Logs em tempo real da feira</div>
+<div class="status" id="st"><span class="dot"></span><span id="stText">Conectando...</span></div>
+
+<div class="stats">
+<div class="stat"><div class="val" id="totalSessions">0</div><div class="lbl">Sessões</div></div>
+<div class="stat"><div class="val" id="totalCmds">0</div><div class="lbl">Comandos</div></div>
+<div class="stat"><div class="val" id="totalRoutines">0</div><div class="lbl">Rotinas</div></div>
+<div class="stat"><div class="val" id="totalUsers">0</div><div class="lbl">Usuários</div></div>
+</div>
+
+<div class="log-header">
+<h2>📋 Logs</h2>
+<button class="btn-clear" onclick="clearLogs()">Limpar</button>
+</div>
+
+<table class="log-table">
+<thead><tr><th>Hora</th><th>Usuário</th><th>Ação</th><th>Tipo</th></tr></thead>
+<tbody id="logBody"><tr><td colspan="4" class="empty">Aguardando logs...</td></tr></tbody>
+</table>
+</div>
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script>
+const TOPIC_LOG='feira_solar_2026/log';
+let logs=[];
+let sessions=0,cmds=0,routines=0;
+let users=new Set();
+
+const client=mqtt.connect('wss://broker.emqx.io:8084/mqtt',{
+    keepalive:60,clean:true,connectTimeout:10000,reconnectPeriod:3000,
+    clientId:'admin_'+Math.random().toString(36).substr(2,6)
+});
+
+client.on('connect',()=>{
+    document.getElementById('st').classList.add('ok');
+    document.getElementById('stText').textContent='Conectado - Escutando logs';
+    client.subscribe(TOPIC_LOG);
+});
+client.on('offline',()=>{
+    document.getElementById('st').classList.remove('ok');
+    document.getElementById('stText').textContent='Offline';
+});
+
+client.on('message',(topic,msg)=>{
+    try{
+        const log=JSON.parse(msg.toString());
+        addLog(log);
+    }catch(e){}
+});
+
+function addLog(log){
+    logs.unshift(log);
+    users.add(log.user);
+    
+    if(log.action.includes('SESSION_START'))sessions++;
+    else if(log.action.includes('ROUTINE'))routines++;
+    else cmds++;
+
+    document.getElementById('totalSessions').textContent=sessions;
+    document.getElementById('totalCmds').textContent=cmds;
+    document.getElementById('totalRoutines').textContent=routines;
+    document.getElementById('totalUsers').textContent=users.size;
+
+    renderLogs();
+}
+
+function renderLogs(){
+    const body=document.getElementById('logBody');
+    body.innerHTML=logs.slice(0,100).map(l=>{
+        let tag='tag-cmd',tagText='Comando';
+        if(l.action.includes('SESSION')){tag='tag-session';tagText='Sessão';}
+        if(l.action.includes('ROUTINE')){tag='tag-routine';tagText='Rotina';}
+        return '<tr><td>'+l.time+'</td><td>'+l.user+'</td><td>'+l.action+'</td><td><span class="tag '+tag+'">'+tagText+'</span></td></tr>';
+    }).join('');
+}
+
+function clearLogs(){
+    logs=[];sessions=0;cmds=0;routines=0;users.clear();
+    document.getElementById('totalSessions').textContent='0';
+    document.getElementById('totalCmds').textContent='0';
+    document.getElementById('totalRoutines').textContent='0';
+    document.getElementById('totalUsers').textContent='0';
+    document.getElementById('logBody').innerHTML='<tr><td colspan="4" class="empty">Logs limpos</td></tr>';
+}
+</script>
+</body>
+</html>

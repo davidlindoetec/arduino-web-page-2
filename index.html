@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Solar Control - Automação Residencial</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#080d1a;color:#f1f5f9;min-height:100vh;padding:0}
+.app{max-width:480px;margin:0 auto;padding:1rem;min-height:100vh;position:relative;overflow:hidden}
+
+/* Bg effect */
+.app::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 20%,rgba(245,158,11,.04) 0%,transparent 50%),radial-gradient(circle at 70% 80%,rgba(59,130,246,.03) 0%,transparent 50%);pointer-events:none;z-index:0}
+.app>*{position:relative;z-index:1}
+
+/* Header */
+.header{text-align:center;padding:1.5rem 0 1rem}
+.header .logo-wrap{width:60px;height:60px;margin:0 auto .8rem;background:linear-gradient(135deg,#f59e0b,#f97316);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;box-shadow:0 8px 25px rgba(245,158,11,.25)}
+.header h1{font-size:1.5rem;font-weight:800;letter-spacing:-.5px}
+.header .sub{color:#475569;font-size:.72rem;margin-top:.3rem;text-transform:uppercase;letter-spacing:2px}
+
+/* Status pill */
+.pill{display:flex;align-items:center;justify-content:center;gap:.4rem;padding:.45rem .9rem;border-radius:50px;margin:0 auto 1.2rem;font-size:.75rem;font-weight:600;width:fit-content;background:rgba(239,68,68,.08);color:#ef4444;border:1px solid rgba(239,68,68,.15)}
+.pill.ok{background:rgba(16,185,129,.08);color:#10b981;border-color:rgba(16,185,129,.15)}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* Tabs */
+.tabs{display:flex;gap:.3rem;margin-bottom:1.2rem;background:rgba(15,23,42,.5);border-radius:12px;padding:.3rem}
+.tab{flex:1;padding:.55rem;border-radius:10px;border:none;font-size:.75rem;font-weight:600;cursor:pointer;color:#64748b;background:transparent;transition:all .2s}
+.tab.active{background:rgba(245,158,11,.12);color:#f59e0b}
+
+/* Cards */
+.card{background:rgba(20,30,50,.6);backdrop-filter:blur(12px);border-radius:18px;padding:1.3rem;margin-bottom:1rem;border:1px solid rgba(51,65,85,.3)}
+
+/* Energy Section */
+.energy-grid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem}
+.energy-card{background:rgba(15,23,42,.5);border-radius:14px;padding:1rem;border:1px solid rgba(51,65,85,.3)}
+.energy-card .label{font-size:.65rem;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:.3rem}
+.energy-card .value{font-size:1.4rem;font-weight:800}
+.energy-card .unit{font-size:.7rem;color:#64748b;font-weight:400}
+.energy-card.solar .value{color:#f59e0b}
+.energy-card.consumption .value{color:#3b82f6}
+.energy-card.savings .value{color:#10b981}
+.energy-card.cost .value{color:#a78bfa}
+
+/* Mini chart */
+.mini-chart{height:40px;display:flex;align-items:flex-end;gap:2px;margin-top:.5rem}
+.mini-chart .bar{flex:1;background:rgba(245,158,11,.3);border-radius:3px 3px 0 0;transition:height .5s}
+
+/* Timer box */
+.timer-display{text-align:center;padding:.8rem}
+.timer-display .time-big{font-size:2.2rem;font-weight:800;color:#f59e0b;font-variant-numeric:tabular-nums}
+.timer-display .label{font-size:.7rem;color:#64748b;margin-top:.2rem}
+.timer-ring-wrap{width:80px;height:80px;margin:0 auto .5rem;position:relative;display:flex;align-items:center;justify-content:center}
+.timer-ring-wrap svg{position:absolute;transform:rotate(-90deg)}
+.timer-ring-wrap circle{fill:none;stroke-width:3.5}
+.timer-ring-wrap .bg{stroke:rgba(30,41,59,.8)}
+.timer-ring-wrap .prog{stroke:#f59e0b;stroke-linecap:round;transition:stroke-dashoffset 1s linear}
+
+/* LED Section */
+.section-label{font-size:.7rem;color:#64748b;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:.7rem;font-weight:700}
+.led-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;margin-bottom:1rem}
+.led-item{background:rgba(15,23,42,.5);border-radius:14px;padding:1rem .4rem;text-align:center;border:2px solid rgba(51,65,85,.3);cursor:pointer;transition:all .25s;user-select:none;-webkit-tap-highlight-color:transparent}
+.led-item:active{transform:scale(.9)}
+.led-item.on{border-color:rgba(245,158,11,.6);background:rgba(245,158,11,.06);box-shadow:0 0 20px rgba(245,158,11,.08)}
+.led-item .bulb{font-size:1.8rem;filter:grayscale(1) opacity(.2);transition:.3s}
+.led-item.on .bulb{filter:none}
+.led-item .lbl{font-size:.72rem;font-weight:700;margin-top:.3rem}
+.led-item .sub{font-size:.6rem;color:#475569}
+
+/* Rele */
+.rele-row{display:flex;align-items:center;background:rgba(15,23,42,.5);border-radius:14px;padding:1rem 1.2rem;border:2px solid rgba(51,65,85,.3);cursor:pointer;transition:all .25s;margin-bottom:1rem;gap:1rem;user-select:none;-webkit-tap-highlight-color:transparent}
+.rele-row:active{transform:scale(.97)}
+.rele-row.on{border-color:rgba(239,68,68,.5);background:rgba(239,68,68,.04)}
+.rele-row .bulb{font-size:2rem;filter:grayscale(1) opacity(.2);transition:.3s}
+.rele-row.on .bulb{filter:none}
+.rele-row .info{flex:1}
+.rele-row .info .name{font-weight:700;font-size:.9rem}
+.rele-row .info .desc{font-size:.65rem;color:#64748b;margin-top:.1rem}
+.rele-badge{font-size:.65rem;padding:.25rem .6rem;border-radius:50px;background:rgba(51,65,85,.4);color:#64748b;font-weight:700}
+.rele-row.on .rele-badge{background:rgba(239,68,68,.12);color:#ef4444}
+
+/* Buttons */
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.5rem}
+.btn{padding:.7rem;border-radius:11px;border:none;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .15s}
+.btn:active{transform:scale(.94)}
+.btn-on{background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;box-shadow:0 3px 12px rgba(245,158,11,.2)}
+.btn-off{background:rgba(51,65,85,.4);color:#94a3b8}
+
+/* Scheduler */
+.sched-card{background:rgba(15,23,42,.4);border-radius:12px;padding:.9rem;margin-bottom:.6rem;display:flex;align-items:center;gap:.8rem;border:1px solid rgba(51,65,85,.2)}
+.sched-card .time{font-size:1.1rem;font-weight:800;color:#f1f5f9;min-width:55px}
+.sched-card .detail{flex:1}
+.sched-card .detail .action{font-size:.78rem;font-weight:600}
+.sched-card .detail .days{font-size:.65rem;color:#64748b;margin-top:.15rem}
+.sched-toggle{width:38px;height:22px;border-radius:22px;background:#1e293b;position:relative;cursor:pointer;transition:.3s;border:1px solid #334155}
+.sched-toggle.on{background:#f59e0b;border-color:#f59e0b}
+.sched-toggle::after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.3s}
+.sched-toggle.on::after{left:18px}
+
+/* Routine */
+.routine-card{background:rgba(15,23,42,.4);border-radius:12px;padding:.9rem;margin-bottom:.6rem;display:flex;align-items:center;gap:.8rem;border:1px solid rgba(51,65,85,.2);cursor:pointer;transition:all .2s}
+.routine-card:active{transform:scale(.97)}
+.routine-card .icon{font-size:1.5rem}
+.routine-card .info{flex:1}
+.routine-card .info .name{font-size:.82rem;font-weight:700}
+.routine-card .info .desc{font-size:.65rem;color:#64748b;margin-top:.1rem}
+.routine-card .arrow{color:#475569;font-size:1rem}
+.routine-card.running{border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.04)}
+.routine-card.running .badge{font-size:.6rem;background:rgba(16,185,129,.15);color:#10b981;padding:.2rem .5rem;border-radius:50px;margin-left:auto;font-weight:600}
+
+/* Screens */
+.screen{display:none}
+.screen.visible{display:block}
+
+/* Start */
+.start-content{text-align:center;padding:2rem 0}
+.start-content .hero{font-size:4.5rem;margin-bottom:1rem;display:block}
+.start-content h2{font-size:1.3rem;font-weight:800;margin-bottom:.5rem}
+.start-content p{color:#94a3b8;font-size:.88rem;line-height:1.7;margin-bottom:1.8rem}
+.start-btn{display:inline-block;padding:1rem 2.5rem;border-radius:14px;border:none;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:800;font-size:1.1rem;cursor:pointer;box-shadow:0 6px 25px rgba(245,158,11,.3);transition:all .2s}
+.start-btn:active{transform:scale(.95)}
+.start-features{margin-top:2rem;display:grid;grid-template-columns:1fr 1fr;gap:.4rem .6rem}
+.start-features div{font-size:.78rem;color:#64748b;padding:.3rem 0}
+
+/* Wait */
+.wait-content{text-align:center;padding:3rem 0}
+.wait-content h2{font-size:1.3rem;margin-bottom:.8rem}
+.wait-content p{color:#94a3b8;font-size:.88rem;line-height:1.7}
+.spinner{width:36px;height:36px;border:3px solid #1e293b;border-top-color:#f59e0b;border-radius:50%;animation:spin .8s linear infinite;margin:1.5rem auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Expired */
+.exp-content{text-align:center;padding:3rem 0}
+.exp-content .icon{font-size:3.5rem;display:block;margin-bottom:1rem}
+.exp-content h2{font-size:1.3rem;margin-bottom:.7rem}
+.exp-content p{color:#94a3b8;font-size:.88rem;line-height:1.7}
+
+/* Denied */
+.denied-content{text-align:center;padding:3rem 0}
+.denied-content .icon{font-size:3.5rem;display:block;margin-bottom:1rem}
+.denied-content h2{font-size:1.3rem;margin-bottom:.7rem;color:#ef4444}
+.denied-content p{color:#94a3b8;font-size:.88rem;line-height:1.7}
+
+.footer{text-align:center;padding:1.5rem 0 .5rem;font-size:.65rem;color:#1e293b}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="header">
+<div class="logo-wrap">☀️</div>
+<h1>Solar Control</h1>
+<div class="sub">Automação Residencial • Energia Solar</div>
+</div>
+
+<div class="pill" id="statusBar"><span class="dot"></span><span id="statusText">Conectando...</span></div>
+
+<!-- DENIED -->
+<div class="screen" id="deniedScreen">
+<div class="denied-content">
+<span class="icon">🔒</span>
+<h2>Acesso Restrito</h2>
+<p>Para usar a demonstração, escaneie o<br>QR Code disponível no stand da feira.</p>
+</div>
+</div>
+
+<!-- START -->
+<div class="screen" id="startScreen">
+<div class="start-content">
+<span class="hero">⚡</span>
+<h2>Bem-vindo!</h2>
+<p>Controle luzes reais em tempo real<br>direto do seu celular.</p>
+<button class="start-btn" onclick="startSession()">Iniciar Demonstração</button>
+<div class="start-features">
+<div>💡 3 LEDs</div>
+<div>🔌 Lâmpada real</div>
+<div>⏱️ 2 minutos</div>
+<div>📊 Gasto simulado</div>
+</div>
+</div>
+</div>
+
+<!-- WAIT -->
+<div class="screen" id="waitScreen">
+<div class="wait-content">
+<h2>⏳ Aguarde sua vez</h2>
+<p>Alguém está usando a demonstração.<br>Você entrará automaticamente.</p>
+<div class="spinner"></div>
+</div>
+</div>
+
+<!-- CONTROL -->
+<div class="screen" id="controlScreen">
+
+<!-- Timer -->
+<div class="card" style="padding:1rem">
+<div class="timer-display">
+<div class="timer-ring-wrap">
+<svg width="80" height="80"><circle class="bg" cx="40" cy="40" r="35"/><circle class="prog" id="timerRing" cx="40" cy="40" r="35" stroke-dasharray="219.9" stroke-dashoffset="0"/></svg>
+<span class="time-big" id="countdown">120</span>
+</div>
+<div class="label">segundos restantes</div>
+</div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+<button class="tab active" onclick="switchTab('devices')">Dispositivos</button>
+<button class="tab" onclick="switchTab('energy')">Energia</button>
+<button class="tab" onclick="switchTab('schedule')">Rotinas</button>
+</div>
+
+<!-- TAB: Devices -->
+<div id="tabDevices">
+<div class="section-label">💡 Iluminação</div>
+<div class="led-row">
+<div class="led-item" id="l1" onclick="toggle('LED1')"><div class="bulb">💡</div><div class="lbl">Sala</div><div class="sub">LED 1</div></div>
+<div class="led-item" id="l2" onclick="toggle('LED2')"><div class="bulb">💡</div><div class="lbl">Cozinha</div><div class="sub">LED 2</div></div>
+<div class="led-item" id="l3" onclick="toggle('LED3')"><div class="bulb">💡</div><div class="lbl">Quarto</div><div class="sub">LED 3</div></div>
+</div>
+
+<div class="section-label">🔌 Relé</div>
+<div class="rele-row" id="releCard" onclick="toggle('RELE')">
+<div class="bulb">💡</div>
+<div class="info"><div class="name">Lâmpada Real</div><div class="desc">Controle 110/220V via relé</div></div>
+<div class="rele-badge" id="releStatus">OFF</div>
+</div>
+
+<div class="btn-row">
+<button class="btn btn-on" onclick="sendCmd('ALLON')">Ligar Tudo</button>
+<button class="btn btn-off" onclick="sendCmd('ALLOFF')">Desligar Tudo</button>
+</div>
+</div>
+
+<!-- TAB: Energy -->
+<div id="tabEnergy" style="display:none">
+<div class="energy-grid">
+<div class="energy-card solar"><div class="label">Geração Solar</div><div class="value" id="enSolar">0<span class="unit"> W</span></div></div>
+<div class="energy-card consumption"><div class="label">Consumo Atual</div><div class="value" id="enConsumo">0<span class="unit"> W</span></div></div>
+<div class="energy-card savings"><div class="label">Economia</div><div class="value" id="enEconomia">R$ 0<span class="unit">/mês</span></div></div>
+<div class="energy-card cost"><div class="label">Custo Evitado</div><div class="value" id="enCusto">0<span class="unit"> kWh</span></div></div>
+</div>
+<div class="card" style="padding:1rem">
+<div class="section-label">📊 Geração Hoje</div>
+<div class="mini-chart" id="miniChart"></div>
+</div>
+</div>
+
+<!-- TAB: Schedule -->
+<div id="tabSchedule" style="display:none">
+<div class="section-label">⏰ Temporizadores</div>
+<div class="sched-card">
+<div class="time">06:30</div>
+<div class="detail"><div class="action">Ligar Sala</div><div class="days">Seg, Ter, Qua, Qui, Sex</div></div>
+<div class="sched-toggle on" onclick="this.classList.toggle('on')"></div>
+</div>
+<div class="sched-card">
+<div class="time">22:00</div>
+<div class="detail"><div class="action">Desligar Tudo</div><div class="days">Todos os dias</div></div>
+<div class="sched-toggle on" onclick="this.classList.toggle('on')"></div>
+</div>
+<div class="sched-card">
+<div class="time">18:30</div>
+<div class="detail"><div class="action">Ligar Lâmpada</div><div class="days">Seg a Sex</div></div>
+<div class="sched-toggle" onclick="this.classList.toggle('on')"></div>
+</div>
+
+<div class="section-label" style="margin-top:1.2rem">🔄 Rotinas</div>
+<div class="routine-card" onclick="runRoutine(this,'Chegando em casa')">
+<div class="icon">🏠</div>
+<div class="info"><div class="name">Chegando em Casa</div><div class="desc">Liga sala + cozinha + lâmpada</div></div>
+<div class="arrow">›</div>
+</div>
+<div class="routine-card" onclick="runRoutine(this,'Boa noite')">
+<div class="icon">🌙</div>
+<div class="info"><div class="name">Boa Noite</div><div class="desc">Desliga tudo, liga quarto por 15min</div></div>
+<div class="arrow">›</div>
+</div>
+<div class="routine-card" onclick="runRoutine(this,'Economia')">
+<div class="icon">💰</div>
+<div class="info"><div class="name">Modo Economia</div><div class="desc">Desliga tudo exceto essenciais</div></div>
+<div class="arrow">›</div>
+</div>
+</div>
+
+</div>
+
+<!-- EXPIRED -->
+<div class="screen" id="expiredScreen">
+<div class="exp-content">
+<span class="icon">⏰</span>
+<h2>Tempo Esgotado!</h2>
+<p>Sua demonstração de 2 minutos terminou.<br>Obrigado por participar!<br><br>🌱 Energia solar é o futuro!</p>
+</div>
+</div>
+
+<div class="footer">Feira de Ciências 2026 • ESP32 + MQTT + Solar</div>
+</div>
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script>
+// ===== CONFIG =====
+const TOPIC_CMD='feira_solar_2026/cmd',TOPIC_STATUS='feira_solar_2026/status',TOPIC_SESSION='feira_solar_2026/session',TOPIC_LOG='feira_solar_2026/log';
+const SESSION_TIME=120,VALID_TOKEN='feira2026';
+const params=new URLSearchParams(window.location.search);
+const hasAccess=(params.get('t')===VALID_TOKEN);
+
+let client=null,connected=false;
+let states={led1:false,led2:false,led3:false,rele:false};
+let sessionOwner=null,myId='u_'+Math.random().toString(36).substr(2,6);
+let countdown=SESSION_TIME,timerInterval=null,inSession=false;
+let cooldownUntil=0; // anti-spam: tempo que precisa esperar
+
+// ===== INIT =====
+if(!hasAccess){show('denied');}else{show('start');connectMQTT();}
+
+// ===== MQTT =====
+function connectMQTT(){
+setStatus(false,'Conectando...');
+client=mqtt.connect('wss://broker.emqx.io:8084/mqtt',{keepalive:60,clean:true,connectTimeout:10000,reconnectPeriod:3000,clientId:'web_'+myId});
+client.on('connect',()=>{connected=true;setStatus(true,'Conectado');client.subscribe(TOPIC_STATUS);client.subscribe(TOPIC_SESSION);});
+client.on('message',(t,m)=>{const msg=m.toString();if(t===TOPIC_STATUS){try{states=JSON.parse(msg);updateUI();}catch(e){}}if(t===TOPIC_SESSION){try{handleSession(JSON.parse(msg));}catch(e){}}});
+client.on('reconnect',()=>setStatus(false,'Reconectando...'));
+client.on('offline',()=>{connected=false;setStatus(false,'Offline');});
+client.on('error',()=>{connected=false;setStatus(false,'Erro');});
+}
+
+// ===== SESSION =====
+function startSession(){
+if(!connected){alert('Aguarde a conexão...');return;}
+// Anti-spam: cooldown de 3 minutos
+const now=Date.now();
+if(cooldownUntil>now){
+const wait=Math.ceil((cooldownUntil-now)/1000);
+alert('Aguarde '+wait+' segundos antes de usar novamente.');
+return;
+}
+if(sessionOwner&&sessionOwner!==myId){show('wait');setTimeout(startSession,3000);return;}
+sessionOwner=myId;inSession=true;countdown=SESSION_TIME;
+client.publish(TOPIC_SESSION,JSON.stringify({owner:myId,action:'start'}));
+logAction('SESSION_START');
+show('control');
+startEnergyTracking();
+if(timerInterval)clearInterval(timerInterval);
+timerInterval=setInterval(()=>{
+countdown--;
+document.getElementById('countdown').textContent=countdown;
+const off=((SESSION_TIME-countdown)/SESSION_TIME)*219.9;
+document.getElementById('timerRing').style.strokeDashoffset=off;
+if(countdown<=0)endSession();
+},1000);
+initChart();
+}
+function endSession(){
+inSession=false;
+if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+stopEnergyTracking();
+sendCmd('ALLOFF');
+logAction('SESSION_END');
+client.publish(TOPIC_SESSION,JSON.stringify({owner:myId,action:'end'}));
+sessionOwner=null;show('expired');
+cooldownUntil=Date.now()+180000; // 3 minutos de cooldown
+}
+function handleSession(d){
+if(d.action==='start'&&d.owner!==myId){sessionOwner=d.owner;if(!inSession)show('wait');}
+if(d.action==='end'){sessionOwner=null;if(!inSession)show('start');}
+}
+
+// ===== COMMANDS =====
+function toggle(dev){if(!inSession)return;const k=dev.toLowerCase();sendCmd(dev+(states[k]?'OFF':'ON'));}
+function sendCmd(cmd){if(!connected)return;client.publish(TOPIC_CMD,cmd);logAction(cmd);}
+
+// ===== UI =====
+function updateUI(){
+document.getElementById('l1').classList.toggle('on',states.led1);
+document.getElementById('l2').classList.toggle('on',states.led2);
+document.getElementById('l3').classList.toggle('on',states.led3);
+document.getElementById('releCard').classList.toggle('on',states.rele);
+document.getElementById('releStatus').textContent=states.rele?'ON':'OFF';
+}
+
+function show(name){
+['start','wait','control','expired','denied'].forEach(s=>document.getElementById(s+'Screen').classList.remove('visible'));
+document.getElementById(name+'Screen').classList.add('visible');
+}
+
+function setStatus(ok,text){
+document.getElementById('statusBar').classList.toggle('ok',ok);
+document.getElementById('statusText').textContent=text;
+}
+
+// ===== TABS =====
+function switchTab(tab){
+document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+event.target.classList.add('active');
+document.getElementById('tabDevices').style.display=tab==='devices'?'block':'none';
+document.getElementById('tabEnergy').style.display=tab==='energy'?'block':'none';
+document.getElementById('tabSchedule').style.display=tab==='schedule'?'block':'none';
+}
+
+// ===== ENERGY - CÁLCULO REAL =====
+// Potências reais dos dispositivos (watts)
+const POWER_LED = 5;     // Cada LED = ~5W
+const POWER_LAMP = 60;   // Lâmpada real = ~60W
+const TARIFA = 0.85;     // R$/kWh (tarifa média Brasil)
+
+let totalConsumoWh = 0;  // Wh consumidos na sessão
+let totalGeracaoWh = 0;  // Wh gerados na sessão
+let energyInterval = null;
+
+function startEnergyTracking() {
+    totalConsumoWh = 0;
+    totalGeracaoWh = 0;
+    if (energyInterval) clearInterval(energyInterval);
+    energyInterval = setInterval(updateEnergy, 1000);
+    initChart();
+}
+
+function stopEnergyTracking() {
+    if (energyInterval) { clearInterval(energyInterval); energyInterval = null; }
+}
+
+function updateEnergy() {
+    // Consumo real: soma dos dispositivos ligados
+    let consumoW = 0;
+    if (states.led1) consumoW += POWER_LED;
+    if (states.led2) consumoW += POWER_LED;
+    if (states.led3) consumoW += POWER_LED;
+    if (states.rele) consumoW += POWER_LAMP;
+
+    // Geração solar: simula baseado na hora real do dia
+    const hora = new Date().getHours();
+    let geracaoW = 0;
+    if (hora >= 6 && hora <= 18) {
+        // Curva do sol: pico ao meio-dia
+        const pico = 150; // Watts pico do painel
+        const distMeioDia = Math.abs(hora - 12);
+        geracaoW = pico * Math.max(0, 1 - (distMeioDia / 7));
+        // Adiciona pequena variação (nuvens)
+        geracaoW *= (0.85 + Math.random() * 0.15);
+    }
+    geracaoW = Math.round(geracaoW);
+
+    // Acumular Wh (a cada 1 segundo = 1/3600 de hora)
+    totalConsumoWh += consumoW / 3600;
+    totalGeracaoWh += geracaoW / 3600;
+
+    // Economia no mês: extrapola a geração atual para 30 dias, 10h de sol
+    const economiaMes = (geracaoW * 10 * 30 / 1000) * TARIFA;
+
+    // Custo evitado na sessão
+    const custoEvitado = totalGeracaoWh / 1000 * TARIFA;
+
+    // Atualizar UI
+    document.getElementById('enSolar').innerHTML = geracaoW + '<span class="unit"> W</span>';
+    document.getElementById('enConsumo').innerHTML = consumoW + '<span class="unit"> W</span>';
+    document.getElementById('enEconomia').innerHTML = 'R$ ' + economiaMes.toFixed(2) + '<span class="unit">/mês</span>';
+    document.getElementById('enCusto').innerHTML = (totalGeracaoWh / 1000).toFixed(4) + '<span class="unit"> kWh</span>';
+
+    updateChart(geracaoW);
+}
+
+// Gráfico de geração por hora real
+let chartBars = [];
+function initChart() {
+    const c = document.getElementById('miniChart');
+    c.innerHTML = '';
+    chartBars = [];
+    const horaAtual = new Date().getHours();
+    for (let i = 0; i < 24; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        // Calcular geração esperada para cada hora
+        let pct = 0;
+        if (i >= 6 && i <= 18) {
+            const dist = Math.abs(i - 12);
+            pct = Math.max(0, (1 - dist / 7)) * 100;
+        }
+        bar.style.height = Math.max(3, pct) + '%';
+        if (i < 6 || i > 18) {
+            bar.style.background = 'rgba(51,65,85,.3)';
+        } else if (i <= horaAtual) {
+            bar.style.background = 'rgba(245,158,11,.6)';
+        } else {
+            bar.style.background = 'rgba(245,158,11,.2)';
+        }
+        // Marca hora atual
+        if (i === horaAtual) {
+            bar.style.background = '#f59e0b';
+            bar.style.boxShadow = '0 0 6px rgba(245,158,11,.5)';
+        }
+        c.appendChild(bar);
+        chartBars.push(bar);
+    }
+}
+
+function updateChart(geracaoW) {
+    const horaAtual = new Date().getHours();
+    if (chartBars[horaAtual]) {
+        const pct = Math.min(100, (geracaoW / 150) * 100);
+        chartBars[horaAtual].style.height = Math.max(5, pct) + '%';
+    }
+}
+
+// ===== ROUTINES (funcionam de verdade) =====
+function runRoutine(el, name) {
+    if (!inSession) return;
+    el.classList.add('running');
+    logAction('ROUTINE:' + name);
+    const arrow = el.querySelector('.arrow');
+    if (arrow) {
+        const badge = document.createElement('div');
+        badge.className = 'badge';
+        badge.textContent = 'Executando...';
+        badge.style.cssText = 'font-size:.6rem;background:rgba(16,185,129,.15);color:#10b981;padding:.2rem .5rem;border-radius:50px;margin-left:auto;font-weight:600';
+        arrow.replaceWith(badge);
+        
+        if (name === 'Chegando em casa') {
+            sendCmd('LED1ON');
+            setTimeout(() => sendCmd('LED2ON'), 500);
+            setTimeout(() => sendCmd('RELEON'), 1000);
+        } else if (name === 'Boa noite') {
+            sendCmd('ALLOFF');
+            setTimeout(() => sendCmd('LED3ON'), 800);
+        } else if (name === 'Economia') {
+            sendCmd('ALLOFF');
+        }
+        
+        setTimeout(() => { badge.textContent = '✓ Feito'; }, 2000);
+    }
+}
+
+// ===== LOG =====
+function logAction(action){
+if(!client||!connected)return;
+const log={user:myId,action:action,time:new Date().toLocaleString('pt-BR'),ts:Date.now()};
+client.publish(TOPIC_LOG,JSON.stringify(log));
+}
+</script>
+</body>
+</html>
