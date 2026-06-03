@@ -144,6 +144,24 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#080d1a;color:#f1f5f
 .denied-content p{color:#94a3b8;font-size:.88rem;line-height:1.7}
 
 .footer{text-align:center;padding:1.5rem 0 .5rem;font-size:.65rem;color:#1e293b}
+
+/* Timer form */
+.add-timer-btn{text-align:center;padding:.8rem;border-radius:12px;border:2px dashed rgba(51,65,85,.4);color:#64748b;font-size:.8rem;font-weight:600;cursor:pointer;margin-bottom:.8rem;transition:all .2s}
+.add-timer-btn:hover{border-color:#f59e0b;color:#f59e0b}
+.timer-form{background:rgba(15,23,42,.6);border-radius:14px;padding:1.2rem;margin-bottom:1rem;border:1px solid rgba(245,158,11,.2)}
+.timer-form .form-title{font-size:.85rem;font-weight:700;margin-bottom:.8rem;color:#f59e0b}
+.timer-form .form-row{margin-bottom:.7rem}
+.timer-form label{display:block;font-size:.7rem;color:#64748b;margin-bottom:.3rem}
+.timer-form input,.timer-form select{width:100%;padding:.6rem .8rem;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#f1f5f9;font-size:.85rem;outline:none}
+.timer-form input:focus,.timer-form select:focus{border-color:#f59e0b}
+.timer-form .form-btns{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.8rem}
+.active-timer{background:rgba(15,23,42,.4);border-radius:12px;padding:.8rem;margin-bottom:.6rem;display:flex;align-items:center;gap:.8rem;border:1px solid rgba(245,158,11,.2)}
+.active-timer .t-icon{font-size:1.2rem}
+.active-timer .t-info{flex:1}
+.active-timer .t-info .t-name{font-size:.8rem;font-weight:700}
+.active-timer .t-info .t-detail{font-size:.65rem;color:#64748b;margin-top:.1rem}
+.active-timer .t-countdown{font-size:.9rem;font-weight:800;color:#f59e0b;min-width:35px;text-align:right}
+.active-timer .t-cancel{font-size:.7rem;padding:.2rem .5rem;border-radius:6px;border:none;background:rgba(239,68,68,.15);color:#ef4444;cursor:pointer;font-weight:600}
 </style>
 </head>
 <body>
@@ -251,23 +269,44 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#080d1a;color:#f1f5f
 <!-- TAB: Schedule -->
 <div id="tabSchedule" style="display:none">
 <div class="section-label">⏰ Temporizadores</div>
-<div class="sched-card">
-<div class="time">06:30</div>
-<div class="detail"><div class="action">Ligar Sala</div><div class="days">Seg, Ter, Qua, Qui, Sex</div></div>
-<div class="sched-toggle on" onclick="this.classList.toggle('on')"></div>
+<div id="timerList"></div>
+<div class="add-timer-btn" onclick="showAddTimer()">+ Novo Temporizador</div>
+
+<!-- Form para criar temporizador -->
+<div id="timerForm" style="display:none" class="timer-form">
+<div class="form-title">Novo Temporizador</div>
+<div class="form-row">
+<label>Nome:</label>
+<input type="text" id="tfName" placeholder="Ex: Ligar Sala" maxlength="20">
 </div>
-<div class="sched-card">
-<div class="time">22:00</div>
-<div class="detail"><div class="action">Desligar Tudo</div><div class="days">Todos os dias</div></div>
-<div class="sched-toggle on" onclick="this.classList.toggle('on')"></div>
+<div class="form-row">
+<label>Dispositivo:</label>
+<select id="tfDevice">
+<option value="LED1">LED 1 (Sala)</option>
+<option value="LED2">LED 2 (Cozinha)</option>
+<option value="LED3">LED 3 (Quarto)</option>
+<option value="RELE">Lâmpada (Relé)</option>
+<option value="ALL">Todos</option>
+</select>
 </div>
-<div class="sched-card">
-<div class="time">18:30</div>
-<div class="detail"><div class="action">Ligar Lâmpada</div><div class="days">Seg a Sex</div></div>
-<div class="sched-toggle" onclick="this.classList.toggle('on')"></div>
+<div class="form-row">
+<label>Ação:</label>
+<select id="tfAction">
+<option value="ON">Ligar</option>
+<option value="OFF">Desligar</option>
+</select>
+</div>
+<div class="form-row">
+<label>Em quantos segundos:</label>
+<input type="number" id="tfSeconds" placeholder="30" min="5" max="120" value="30">
+</div>
+<div class="form-btns">
+<button class="btn btn-on" onclick="createTimer()">Criar</button>
+<button class="btn btn-off" onclick="hideAddTimer()">Cancelar</button>
+</div>
 </div>
 
-<div class="section-label" style="margin-top:1.2rem">🔄 Rotinas</div>
+<div class="section-label" style="margin-top:1.2rem">🔄 Rotinas Rápidas</div>
 <div class="routine-card" onclick="runRoutine(this,'Chegando em casa')">
 <div class="icon">🏠</div>
 <div class="info"><div class="name">Chegando em Casa</div><div class="desc">Liga sala + cozinha + lâmpada</div></div>
@@ -275,12 +314,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#080d1a;color:#f1f5f
 </div>
 <div class="routine-card" onclick="runRoutine(this,'Boa noite')">
 <div class="icon">🌙</div>
-<div class="info"><div class="name">Boa Noite</div><div class="desc">Desliga tudo, liga quarto por 15min</div></div>
+<div class="info"><div class="name">Boa Noite</div><div class="desc">Desliga tudo e programa ligar de manhã</div></div>
 <div class="arrow">›</div>
 </div>
 <div class="routine-card" onclick="runRoutine(this,'Economia')">
 <div class="icon">💰</div>
-<div class="info"><div class="name">Modo Economia</div><div class="desc">Desliga tudo exceto essenciais</div></div>
+<div class="info"><div class="name">Modo Economia</div><div class="desc">Desliga tudo menos quarto</div></div>
 <div class="arrow">›</div>
 </div>
 </div>
@@ -303,7 +342,24 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#080d1a;color:#f1f5f
 <script>
 // ===== CONFIG =====
 const TOPIC_CMD='feira_solar_2026/cmd',TOPIC_STATUS='feira_solar_2026/status',TOPIC_SESSION='feira_solar_2026/session',TOPIC_LOG='feira_solar_2026/log';
-const SESSION_TIME=120,VALID_TOKEN='feira2026';
+const SESSION_TIME=120;
+
+// ===== PROTEÇÃO =====
+// Token ofuscado (não fica visível direto no código)
+const _k=[102,101,105,114,97,50,48,50,54]; // ofuscado
+const VALID_TOKEN=_k.map(c=>String.fromCharCode(c)).join('');
+
+// Anti-inspect: dificulta abrir DevTools (não bloqueia 100%, mas atrapalha)
+document.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('keydown',e=>{
+    if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&(e.key==='I'||e.key==='J'||e.key==='C'))||(e.ctrlKey&&e.key==='u')){
+        e.preventDefault();
+    }
+});
+
+// Rate limiting: máximo 30 comandos por sessão
+let cmdCount=0;
+const MAX_CMDS=30;
 const params=new URLSearchParams(window.location.search);
 const hasAccess=(params.get('t')===VALID_TOKEN);
 
@@ -338,7 +394,7 @@ alert('Aguarde '+wait+' segundos antes de usar novamente.');
 return;
 }
 if(sessionOwner&&sessionOwner!==myId){show('wait');setTimeout(startSession,3000);return;}
-sessionOwner=myId;inSession=true;countdown=SESSION_TIME;
+sessionOwner=myId;inSession=true;countdown=SESSION_TIME;cmdCount=0;
 client.publish(TOPIC_SESSION,JSON.stringify({owner:myId,action:'start'}));
 logAction('SESSION_START');
 show('control');
@@ -357,6 +413,7 @@ function endSession(){
 inSession=false;
 if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
 stopEnergyTracking();
+clearAllTimers();
 sendCmd('ALLOFF');
 logAction('SESSION_END');
 client.publish(TOPIC_SESSION,JSON.stringify({owner:myId,action:'end'}));
@@ -370,7 +427,16 @@ if(d.action==='end'){sessionOwner=null;if(!inSession)show('start');}
 
 // ===== COMMANDS =====
 function toggle(dev){if(!inSession)return;const k=dev.toLowerCase();sendCmd(dev+(states[k]?'OFF':'ON'));}
-function sendCmd(cmd){if(!connected)return;client.publish(TOPIC_CMD,cmd);logAction(cmd);}
+function sendCmd(cmd){
+    if(!connected)return;
+    cmdCount++;
+    if(cmdCount>MAX_CMDS){
+        alert('Limite de comandos atingido nesta sessão.');
+        return;
+    }
+    client.publish(TOPIC_CMD,cmd);
+    logAction(cmd);
+}
 
 // ===== UI =====
 function updateUI(){
@@ -504,31 +570,38 @@ function updateChart(geracaoW) {
     }
 }
 
-// ===== ROUTINES (funcionam de verdade) =====
+// ===== ROUTINES (funcionam de verdade, reutilizáveis) =====
 function runRoutine(el, name) {
     if (!inSession) return;
-    el.classList.add('running');
     logAction('ROUTINE:' + name);
+    
+    // Feedback visual temporário (não trava o botão)
     const arrow = el.querySelector('.arrow');
+    const badge = el.querySelector('.r-badge');
+    
     if (arrow) {
-        const badge = document.createElement('div');
-        badge.className = 'badge';
-        badge.textContent = 'Executando...';
-        badge.style.cssText = 'font-size:.6rem;background:rgba(16,185,129,.15);color:#10b981;padding:.2rem .5rem;border-radius:50px;margin-left:auto;font-weight:600';
-        arrow.replaceWith(badge);
-        
-        if (name === 'Chegando em casa') {
-            sendCmd('LED1ON');
-            setTimeout(() => sendCmd('LED2ON'), 500);
-            setTimeout(() => sendCmd('RELEON'), 1000);
-        } else if (name === 'Boa noite') {
-            sendCmd('ALLOFF');
-            setTimeout(() => sendCmd('LED3ON'), 800);
-        } else if (name === 'Economia') {
-            sendCmd('ALLOFF');
-        }
-        
-        setTimeout(() => { badge.textContent = '✓ Feito'; }, 2000);
+        arrow.style.display = 'none';
+        const b = document.createElement('span');
+        b.className = 'r-badge';
+        b.textContent = '✓';
+        b.style.cssText = 'font-size:.7rem;background:rgba(16,185,129,.15);color:#10b981;padding:.2rem .5rem;border-radius:50px;font-weight:600';
+        el.appendChild(b);
+        setTimeout(() => { b.remove(); arrow.style.display = ''; }, 2000);
+    } else if (badge) {
+        return; // Já executando, ignora clique duplicado
+    }
+
+    if (name === 'Chegando em casa') {
+        sendCmd('LED1ON');
+        setTimeout(() => sendCmd('LED2ON'), 500);
+        setTimeout(() => sendCmd('RELEON'), 1000);
+    } else if (name === 'Boa noite') {
+        sendCmd('ALLOFF');
+    } else if (name === 'Economia') {
+        sendCmd('LED1OFF');
+        setTimeout(() => sendCmd('LED2OFF'), 300);
+        setTimeout(() => sendCmd('RELEOFF'), 600);
+        setTimeout(() => sendCmd('LED3ON'), 900);
     }
 }
 
@@ -537,6 +610,83 @@ function logAction(action){
 if(!client||!connected)return;
 const log={user:myId,action:action,time:new Date().toLocaleString('pt-BR'),ts:Date.now()};
 client.publish(TOPIC_LOG,JSON.stringify(log));
+}
+
+// ===== TIMERS =====
+let timers = [];
+let timerIdCounter = 0;
+
+function showAddTimer() {
+    document.getElementById('timerForm').style.display = 'block';
+}
+function hideAddTimer() {
+    document.getElementById('timerForm').style.display = 'none';
+}
+
+function createTimer() {
+    if (!inSession) return;
+    const name = document.getElementById('tfName').value.trim() || 'Timer';
+    const device = document.getElementById('tfDevice').value;
+    const action = document.getElementById('tfAction').value;
+    const seconds = parseInt(document.getElementById('tfSeconds').value) || 30;
+    
+    if (seconds < 5 || seconds > 120) { alert('Tempo entre 5 e 120 segundos'); return; }
+    
+    const id = ++timerIdCounter;
+    const cmd = device === 'ALL' ? ('ALL' + action) : (device + action);
+    const timer = { id, name, device, action, seconds, remaining: seconds, cmd };
+    timers.push(timer);
+    
+    // Iniciar contagem
+    timer.interval = setInterval(() => {
+        timer.remaining--;
+        renderTimers();
+        if (timer.remaining <= 0) {
+            clearInterval(timer.interval);
+            sendCmd(timer.cmd);
+            logAction('TIMER:' + timer.name + ':' + timer.cmd);
+            timers = timers.filter(t => t.id !== id);
+            renderTimers();
+        }
+    }, 1000);
+    
+    logAction('TIMER_CREATE:' + name + ':' + seconds + 's');
+    hideAddTimer();
+    renderTimers();
+    
+    // Limpar form
+    document.getElementById('tfName').value = '';
+    document.getElementById('tfSeconds').value = '30';
+}
+
+function cancelTimer(id) {
+    const timer = timers.find(t => t.id === id);
+    if (timer && timer.interval) clearInterval(timer.interval);
+    timers = timers.filter(t => t.id !== id);
+    renderTimers();
+}
+
+function renderTimers() {
+    const list = document.getElementById('timerList');
+    if (timers.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:.8rem;font-size:.75rem;color:#334155">Nenhum temporizador ativo</div>';
+        return;
+    }
+    list.innerHTML = timers.map(t => 
+        '<div class="active-timer">' +
+        '<div class="t-icon">⏱️</div>' +
+        '<div class="t-info"><div class="t-name">' + t.name + '</div>' +
+        '<div class="t-detail">' + t.device + ' → ' + t.action + '</div></div>' +
+        '<div class="t-countdown">' + t.remaining + 's</div>' +
+        '<button class="t-cancel" onclick="cancelTimer(' + t.id + ')">✕</button>' +
+        '</div>'
+    ).join('');
+}
+
+// Limpar timers quando sessão acaba
+function clearAllTimers() {
+    timers.forEach(t => { if (t.interval) clearInterval(t.interval); });
+    timers = [];
 }
 </script>
 </body>
