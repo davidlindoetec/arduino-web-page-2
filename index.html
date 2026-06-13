@@ -254,15 +254,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#080d1a;color:#f1f5f
 
 <!-- TAB: Energy -->
 <div id="tabEnergy" style="display:none">
-<div class="energy-grid">
-<div class="energy-card solar"><div class="label">Geração Solar</div><div class="value" id="enSolar">0<span class="unit"> W</span></div></div>
+<div class="energy-grid" style="grid-template-columns:1fr">
 <div class="energy-card consumption"><div class="label">Consumo Atual</div><div class="value" id="enConsumo">0<span class="unit"> W</span></div></div>
-<div class="energy-card savings"><div class="label">Economia</div><div class="value" id="enEconomia">R$ 0<span class="unit">/mês</span></div></div>
-<div class="energy-card cost"><div class="label">Custo Evitado</div><div class="value" id="enCusto">0<span class="unit"> kWh</span></div></div>
-</div>
-<div class="card" style="padding:1rem">
-<div class="section-label">📊 Geração Hoje</div>
-<div class="mini-chart" id="miniChart"></div>
 </div>
 </div>
 
@@ -320,6 +313,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#080d1a;color:#f1f5f
 <div class="routine-card" onclick="runRoutine(this,'Economia')">
 <div class="icon">💰</div>
 <div class="info"><div class="name">Modo Economia</div><div class="desc">Desliga tudo menos quarto</div></div>
+<div class="arrow">›</div>
+</div>
+<div class="routine-card" style="border-color:rgba(239,68,68,.2)" onclick="runRoutine(this,'Desligar')">
+<div class="icon">🔴</div>
+<div class="info"><div class="name">Desligar Tudo</div><div class="desc">Desliga todos os dispositivos</div></div>
 <div class="arrow">›</div>
 </div>
 </div>
@@ -496,36 +494,8 @@ function updateEnergy() {
     if (states.led3) consumoW += POWER_LED;
     if (states.rele) consumoW += POWER_LAMP;
 
-    // Geração solar: simula baseado na hora real do dia
-    const hora = new Date().getHours();
-    let geracaoW = 0;
-    if (hora >= 6 && hora <= 18) {
-        // Curva do sol: pico ao meio-dia
-        const pico = 150; // Watts pico do painel
-        const distMeioDia = Math.abs(hora - 12);
-        geracaoW = pico * Math.max(0, 1 - (distMeioDia / 7));
-        // Adiciona pequena variação (nuvens)
-        geracaoW *= (0.85 + Math.random() * 0.15);
-    }
-    geracaoW = Math.round(geracaoW);
-
-    // Acumular Wh (a cada 1 segundo = 1/3600 de hora)
-    totalConsumoWh += consumoW / 3600;
-    totalGeracaoWh += geracaoW / 3600;
-
-    // Economia no mês: extrapola a geração atual para 30 dias, 10h de sol
-    const economiaMes = (geracaoW * 10 * 30 / 1000) * TARIFA;
-
-    // Custo evitado na sessão
-    const custoEvitado = totalGeracaoWh / 1000 * TARIFA;
-
     // Atualizar UI
-    document.getElementById('enSolar').innerHTML = geracaoW + '<span class="unit"> W</span>';
     document.getElementById('enConsumo').innerHTML = consumoW + '<span class="unit"> W</span>';
-    document.getElementById('enEconomia').innerHTML = 'R$ ' + economiaMes.toFixed(2) + '<span class="unit">/mês</span>';
-    document.getElementById('enCusto').innerHTML = (totalGeracaoWh / 1000).toFixed(4) + '<span class="unit"> kWh</span>';
-
-    updateChart(geracaoW);
 }
 
 // Gráfico de geração por hora real
@@ -602,6 +572,8 @@ function runRoutine(el, name) {
         setTimeout(() => sendCmd('LED2OFF'), 300);
         setTimeout(() => sendCmd('RELEOFF'), 600);
         setTimeout(() => sendCmd('LED3ON'), 900);
+    } else if (name === 'Desligar') {
+        sendCmd('ALLOFF');
     }
 }
 
